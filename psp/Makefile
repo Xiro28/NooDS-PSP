@@ -41,7 +41,7 @@ ASFLAGS = $(CFLAGS)
 INCDIR =  include/
 
 LIBDIR =  libs/
-LIBS  =  -lpspmath -lME -lpspdmac -lpspirkeyb -lpspwlan -lpspgum -lpspgu -lpsppower -lfreetype -lm -lpsphprm -lpspaudio -lstdc++ -lpspvfpu -lpsprtc -lvorbisidec
+LIBS  =  -lME -lpspdmac -lpspirkeyb -lpspwlan -lpspgum -lpspgu -lpsppower -lfreetype -lm -lpsphprm -lpspaudio -lstdc++ -lpspvfpu -lpsprtc -lvorbisidec
 LIBS +=  -lpspaudiolib -lvorbisidec -logg
 
 EXTRA_TARGETS = EBOOT.PBP
