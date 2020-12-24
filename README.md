@@ -6,6 +6,7 @@
 - Arm9 Bios
 - Arm7 Bios
 - NDS firmware
+- Media Engine plugin (mediaengine.prx)
 
 Then rename them as follows:
   - Arm9 bios -> bios9.bin
