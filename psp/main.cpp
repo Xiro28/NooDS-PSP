@@ -241,7 +241,7 @@ bool running = false;
 bool skipframe = true;
 bool done = true;
 
-bool CPU_HACK = false;
+bool CPU_HACK = true;
 
 void Manager(){ 
     SceCtrlData pad;
