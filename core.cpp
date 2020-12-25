@@ -85,19 +85,10 @@ void Core::runGbaFrame()
 
 int ME_Core(int i){
     Core * c = (Core*)i;
-    
-    if (c->SkipFrame) return 1;
 
-    if (c->CheckTimer){
-        if (c->timers[0].shouldTick())    c->timers[0].tick(2);
-        if (c->timers[1].shouldTick())    c->timers[1].tick(2);
-
-        c->CheckTimer = false;
-    }
-
-    for (int j = 0; j<192;j++){
-        c->gpu2D[0].drawScanline(j);
-        c->gpu2D[1].drawScanline(j);
+    for (int k = 0; k < 263;k++){
+        if (k < 192) c->gpu.scanline256();
+        c->gpu.scanline355();
     }
 
     return 1;
@@ -111,9 +102,11 @@ void Core::runNdsFrame()
     sceKernelDcacheWritebackInvalidateAll();
 
     if (ME_JobReturnValue() || first){
+        SkipFrame = !SkipFrame;
         J_EXECUTE_ME_ONCE(ME_Core,(int)this);
         first = false;
     }
+
     //ME_Core((int)this);
 
     for (int i = 0; i < 263; i++) // 263 scanlines
@@ -142,43 +135,28 @@ void Core::runNdsFrame()
             if (gpu3D.shouldRun()) gpu3D.runCycle();
 
             //Stop the loop if both halted
-            if (CPU_HACK && !interpreter[0].shouldRun() && !interpreter[1].shouldRun()){
-                CheckDMA = CheckTimer = true;
+            if (CPU_HACK && !interpreter[0].shouldRun() && !interpreter[1].shouldRun())
                 break;
-            }
         }
 
-        if (gpu3D.shouldRun()) gpu3D.runCycle();
-
-        if (CPU_HACK && !SkipFrame && ME_JobReturnValue()) {
-
-            gpu.scanline256();
-
-            if (CheckDMA && dma[0].shouldTransfer())    dma[0].transfer();
-            if (CheckDMA && dma[1].shouldTransfer())    dma[1].transfer();
-                CheckDMA = false;
-        }
-
-        gpu.scanline355();
+        if (!SkipFrame && i < 192)  gpu2D[0].drawScanline(i);
     }
 
-        // Copy the completed sub-framebuffers to the main framebuffer
-        if (gpu.readPowCnt1() & BIT(0) && ME_JobReturnValue()) // LCDs enabled
+    // Copy the completed sub-framebuffers to the main framebuffer
+    if (ME_JobReturnValue() && gpu.readPowCnt1() & BIT(0)) // LCDs enabled
+    {
+        sceKernelDcacheWritebackInvalidateAll();
+        if (gpu.readPowCnt1() & BIT(15)) // Display swap
         {
-            SkipFrame = !SkipFrame;
-
-            sceKernelDcacheWritebackInvalidateAll();
-            if (gpu.readPowCnt1() & BIT(15)) // Display swap
-            {
-                psp_render->DrawFrame(gpu2D[0].getFramebuffer(0),gpu2D[1].getFramebuffer(0));
-            }
-            else
-            {
-                psp_render->DrawFrame(gpu2D[1].getFramebuffer(0),gpu2D[0].getFramebuffer(0));
-            }
-
-            MEfpsCount++;
+            psp_render->DrawFrame(gpu2D[0].getFramebuffer(0),gpu2D[1].getFramebuffer(0));
         }
+        else
+        {
+            psp_render->DrawFrame(gpu2D[1].getFramebuffer(0),gpu2D[0].getFramebuffer(0));
+        }
+
+         MEfpsCount++;
+    }
 
     fpsCount++;
 

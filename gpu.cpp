@@ -90,8 +90,10 @@ void Gpu::scanline256()
     if (vCount < 192)
     {
         // Draw visible scanlines
-       /* core->gpu2D[0].drawScanline(vCount);
-        core->gpu2D[1].drawScanline(vCount);*/
+        if (!core->SkipFrame){
+         //   core->gpu2D[0].drawScanline(vCount);
+            core->gpu2D[1].drawScanline(vCount);
+        }
 
         // Trigger H-blank DMA transfers for visible scanlines (ARM9 only)
         core->dma[0].trigger(2);
