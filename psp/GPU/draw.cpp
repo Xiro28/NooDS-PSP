@@ -42,7 +42,6 @@ Draw::Draw()
 
 	sceGuClearColor(0xFF404040);
     sceGuDisable(GU_SCISSOR_TEST);
-	sceGuEnable(GU_TEXTURE_2D);
 
 	sceGuFinish();
 	sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
@@ -84,12 +83,36 @@ void DrawSliced(int dx){
   }
 }
 
+void Draw::DrawTouchPointer(){
+
+	struct Vertex* vertices = (struct Vertex*)sceGuGetMemory(2 * sizeof(struct Vertex));
+
+	static const int sz_pointer = 3;
+
+	vertices[0].u = 0;
+	vertices[0].v = 0;
+	vertices[0].x = TX;
+	vertices[0].y = TY;
+	vertices[0].z = 0;
+
+	vertices[1].u = sz_pointer;
+	vertices[1].v = sz_pointer;
+	vertices[1].x = TX + sz_pointer;
+	vertices[1].y = TY + sz_pointer;
+	vertices[1].z = 0;
+
+	sceGuDrawArray(GU_SPRITES, TEXTURE_FLAGS, 2, NULL, vertices);
+
+}
+
 void Draw::DrawFrame(uint16_t * top,uint16_t * bottom)
 {
 	sceGuStart(GU_DIRECT, list);
 
+	sceGuEnable(GU_TEXTURE_2D);
+
 	sceGuClearColor(0 /*0x00ff00ff*/);
-    //sceGuClear(GU_COLOR_BUFFER_BIT);
+    sceGuClear(GU_COLOR_BUFFER_BIT);
 
     sceGuTexMode(GU_PSM_5551, 0, 0, 0);
     sceGuTexImage(0, 256, 256, 256, top);
@@ -108,6 +131,10 @@ void Draw::DrawFrame(uint16_t * top,uint16_t * bottom)
 	sceGuTexWrap(GU_CLAMP, GU_CLAMP);
 
 	DrawSliced(240);
+
+	sceGuDisable(GU_TEXTURE_2D);
+
+	DrawTouchPointer();
 
 	sceGuFinish();
 	sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
