@@ -87,153 +87,26 @@ void Gpu::gbaScanline308()
 
 void Gpu::scanline256()
 {
-    if (vCount < 192)
+
+    // Draw 3D scanlines 48 lines in advance, if the current 3D is dirty
+    // If the 3D parameters haven't changed since the last frame, there's no need to draw it again
+    // Bit 0 of the dirty variable represents invalidation, and bit 1 represents a frame currently drawing
+    if (dirty3D && (core->gpu2D[0].readDispCnt() & BIT(3)) && ((vCount + 48) % 263) < 192)
     {
-        // Draw visible scanlines
-        if (!core->SkipFrame){
-         //   core->gpu2D[0].drawScanline(vCount);
-            core->gpu2D[1].drawScanline(vCount);
-        }
-
-        // Trigger H-blank DMA transfers for visible scanlines (ARM9 only)
-        core->dma[0].trigger(2);
-
-        // Start a display capture at the beginning of the frame if one was requested
-        if (vCount == 0 && (dispCapCnt & BIT(31)))
-            displayCapture = true;
-
-        // Perform a display capture
-        if (displayCapture)
-        {
-            // Determine the capture size
-            int width, height;
-            switch ((dispCapCnt & 0x00300000) >> 20) // Capture size
-            {
-                case 0: width = 128; height = 128; break;
-                case 1: width = 256; height =  64; break;
-                case 2: width = 256; height = 128; break;
-                case 3: width = 256; height = 192; break;
-            }
-
-            // Get the VRAM destination address for the current scanline
-            uint32_t base = 0x6800000 + ((dispCapCnt & 0x00030000) >> 16) * 0x20000;
-            uint32_t writeOffset = ((dispCapCnt & 0x000C0000) >> 3) + vCount * width * 2;
-
-            // Copy the source contents to memory as a 15-bit bitmap
-            switch ((dispCapCnt & 0x60000000) >> 29) // Capture source
-            {
-                case 0: // Source A
-                {
-                    // Choose from 2D engine A or the 3D engine
-                    uint16_t *source;
-                    if (dispCapCnt & BIT(24))
-                        source = core->gpu3DRenderer.getFramebuffer(vCount);
-                    else
-                        source = core->gpu2D[0].getFramebuffer(vCount);
-
-                    // Copy a scanline to memory
-                    for (int i = 0; i < width; i++)
-                        core->memory.write<uint16_t>(0, base + (writeOffset + i * 2) % 0x20000, rgb6ToRgb5(source[i]));
-
-                    break;
-                }
-
-                case 1: // Source B
-                {
-                    if (dispCapCnt & BIT(25))
-                    {
-                        printf("Unimplemented display capture source: display FIFO\n");
-                        break;
-                    }
-
-                    // Get the VRAM source address for the current scanline
-                    uint32_t readOffset = ((dispCapCnt & 0x0C000000) >> 11) + vCount * width * 2;
-
-                    // Copy a scanline to memory
-                    for (int i = 0; i < width; i++)
-                    {
-                        uint16_t color = core->memory.read<uint16_t>(0, base + (readOffset + i * 2) % 0x20000);
-                        core->memory.write<uint16_t>(0, base + (writeOffset + i * 2) % 0x20000, color);
-                    }
-
-                    break;
-                }
-
-                default: // Blended
-                {
-                    if (dispCapCnt & BIT(25))
-                    {
-                        printf("Unimplemented display capture source: display FIFO\n");
-                        break;
-                    }
-
-                    // Choose from 2D engine A or the 3D engine
-                    uint16_t *source;
-                    if (dispCapCnt & BIT(24))
-                        source = core->gpu3DRenderer.getFramebuffer(vCount);
-                    else
-                        source = core->gpu2D[0].getFramebuffer(vCount);
-
-                    // Get the VRAM source address for the current scanline
-                    uint32_t readOffset = ((dispCapCnt & 0x0C000000) >> 11) + vCount * width * 2;
-
-                    // Copy a scanline to memory
-                    for (int i = 0; i < width; i++)
-                    {
-                        // Get colors from the two sources
-                        uint16_t c1 = rgb6ToRgb5(source[i]);
-                        uint16_t c2 = core->memory.read<uint16_t>(0, base + (readOffset + i * 2) % 0x20000);
-
-                        // Get the blending factors for the two sources
-                        int eva = (dispCapCnt & 0x0000001F) >> 0; if (eva > 16) eva = 16;
-                        int evb = (dispCapCnt & 0x00001F00) >> 8; if (evb > 16) evb = 16;
-
-                        // Blend the color values
-                        uint8_t r = (((c1 >>  0) & 0x1F) * eva + ((c2 >>  0) & 0x1F) * evb) / 16;
-                        uint8_t g = (((c1 >>  5) & 0x1F) * eva + ((c2 >>  5) & 0x1F) * evb) / 16;
-                        uint8_t b = (((c1 >> 10) & 0x1F) * eva + ((c2 >> 10) & 0x1F) * evb) / 16;
-
-                        uint16_t color = BIT(15) | (b << 10) | (g << 5) | r;
-                        core->memory.write<uint16_t>(0, base + (writeOffset + i * 2) % 0x20000, color);
-                    }
-
-                    break;
-                }
-            }
-
-            // End the display capture
-            if (vCount + 1 == height)
-            {
-                displayCapture = false;
-                dispCapCnt &= ~BIT(31);
-            }
-        }
-
-        // Display captures are performed on the layers, even if the display is set to something else
-        // After the display capture, redraw the scanline or apply master brightness if needed
-        core->gpu2D[0].finishScanline(vCount);
-        core->gpu2D[1].finishScanline(vCount);
+        if (vCount == 215) dirty3D = BIT(1);
+        core->gpu3DRenderer.drawScanline((vCount + 48) % 263);
+        if (vCount == 143) dirty3D &= ~BIT(1);
     }
 
-        // Draw 3D scanlines 48 lines in advance, if the current 3D is dirty
-        // If the 3D parameters haven't changed since the last frame, there's no need to draw it again
-        // Bit 0 of the dirty variable represents invalidation, and bit 1 represents a frame currently drawing
-        if (dirty3D && (core->gpu2D[0].readDispCnt() & BIT(3)) && ((vCount + 48) % 263) < 192)
-        {
-            if (vCount == 215) dirty3D = BIT(1);
-            core->gpu3DRenderer.drawScanline((vCount + 48) % 263);
-            if (vCount == 143) dirty3D &= ~BIT(1);
-        }
+    for (int i = 0; i < 2; i++)
+    {
+        // Set the H-blank flag
+        dispStat[i] |= BIT(1);
 
-        for (int i = 0; i < 2; i++)
-        {
-            // Set the H-blank flag
-            dispStat[i] |= BIT(1);
-
-            // Trigger an H-blank IRQ if enabled
-            if (dispStat[i] & BIT(4))
-                core->interpreter[i].sendInterrupt(1);
-        }
+        // Trigger an H-blank IRQ if enabled
+        if (dispStat[i] & BIT(4))
+            core->interpreter[i].sendInterrupt(1);
+    }
 }
 
 void Gpu::scanline355()
