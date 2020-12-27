@@ -53,6 +53,8 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_VFPU | THREAD_ATTR_USER);
 ScreenLayout layout; 
 Core *core;
 
+int memory = 7;
+
 const u16 pspKEY[12] =
   { PSP_CTRL_CIRCLE,    //A
 	PSP_CTRL_CROSS,     //B
@@ -221,6 +223,16 @@ void ROM_CHOOSER()
 				 sprintf(rom_filename,"","");
 				 break;
 				}
+
+				if(pad.Buttons & PSP_CTRL_RTRIGGER)
+				{
+					memory++;
+				}
+
+				if(pad.Buttons & PSP_CTRL_LTRIGGER)
+				{
+					memory--;
+				}
 			
 				if(pad.Buttons & PSP_CTRL_UP){
 					selpos--;
@@ -244,17 +256,16 @@ bool done = true;
 bool CPU_HACK = true;
 
 void Manager(){ 
+
     SceCtrlData pad;
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
     sceCtrlPeekBufferPositive(&pad, 1); 
 
-    for(int i=0;i<12;i++) {
-    if (pad.Buttons & pspKEY[i])
-        core->input.pressKey(i);
-    else
-        core->input.releaseKey(i);
-    }
+	uint16_t TouchX = psp_render->GetRealTouchX(), TouchY = psp_render->GetRealTouchY();
+
+	pspDebugScreenSetXY(0, 1);
+	pspDebugScreenPrintf("FPS:   %d   ME:    %d    ",core->getFps(),core->getMEFps());
 
 	if (pad.Buttons & PSP_CTRL_SELECT && pad.Buttons & PSP_CTRL_DOWN){
 		CPU_HACK = false;
@@ -264,19 +275,73 @@ void Manager(){
 		CPU_HACK = true;
 	}
 
+	if (pad.Lx < 10) {
+		--TouchX; --TouchX;
+		--TouchX; --TouchX;
+	}
+
+	if (pad.Lx > 245) {
+		++TouchX; ++TouchX;
+		++TouchX; ++TouchX;
+	}
+
+	if (pad.Ly < 10) {
+		--TouchY; --TouchY;
+		--TouchY; --TouchY;
+	}
+
+	if (pad.Ly > 245) {
+		++TouchY; ++TouchY;
+		++TouchY; ++TouchY;
+	}
+
+	psp_render->SetTouchCoord(TouchX,TouchY);
+	
+	if (pad.Buttons & PSP_CTRL_RTRIGGER && pad.Buttons & PSP_CTRL_CIRCLE) {
+	  	core->input.pressScreen();
+        core->spi.setTouch(psp_render->GetTouchX(), psp_render->GetTouchY());
+		return;
+	  }else{
+		core->input.releaseScreen();
+        core->spi.clearTouch();
+	  }
+
 	if(pad.Buttons & PSP_CTRL_HOME){
 		sceKernelExitGame();
 	}
+
+	for(int i=0;i<12;i++) {
+    if (pad.Buttons & pspKEY[i])
+        core->input.pressKey(i);
+    else
+        core->input.releaseKey(i);
+    }
 	
-	pspDebugScreenSetXY(0, 1);
-	pspDebugScreenPrintf("FPS:   %d   ME:    %d    ",core->getFps(),core->getMEFps());
-    //psp_render->DrawFrame(core->gpu2D[0].getFramebuffer(0),core->gpu2D[1].getFramebuffer(0));
+}
+
+int selectionToSize(int selection)
+{
+    switch (selection)
+    {
+        case 1:  return    0x200; //  0.5KB
+        case 2:  return   0x2000; //    8KB
+        case 3:  return   0x8000; //   32KB
+        case 4:  return  0x10000; //   64KB
+        case 5:  return  0x20000; //  128KB
+        case 6:  return  0x40000; //  256KB
+        case 7:  return  0x80000; //  512KB
+        case 8:  return 0x100000; // 1024KB
+        case 9:  return 0x800000; // 8192KB
+        default: return        0; // None
+    }
 }
 
 
 void runCore(void *args)
 {
     psp_render = new Draw();
+
+	core->cartridge.resizeNdsSave(selectionToSize(memory));
         
     // Run the emulator
     while (running){
