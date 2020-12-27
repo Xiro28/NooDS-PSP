@@ -27,8 +27,6 @@ void Input::pressKey(int key)
         keyInput &= ~BIT(key);
     else if (key < 12) // X, Y
         extKeyIn &= ~BIT(key - 10);
-
-    
 }
 
 void Input::releaseKey(int key)

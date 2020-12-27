@@ -43,6 +43,7 @@
 
 void Rtc::writeRtc(uint8_t value)
 {
+    static const uint8_t default_value = ((5 / 10) << 4) | (5 % 10);
     if (value & BIT(2)) // CS high
     {
         if ((rtc & BIT(1)) && !(value & BIT(1))) // SCK high to low
@@ -74,29 +75,29 @@ void Rtc::writeRtc(uint8_t value)
                             if (writeCount == 8)
                             {
                                 // Get the local time
-                                std::time_t t = std::time(nullptr);
+                                /*std::time_t t = std::time(nullptr);
                                 std::tm *time = std::localtime(&t);
                                 time->tm_year %= 100; // The DS only counts years 2000-2099
                                 time->tm_mon++; // The DS starts month values at 1, not 0
 
                                 // Convert to 12-hour mode if enabled
                                 uint8_t hour = time->tm_hour;
-                                if (!(status1 & BIT(1))) time->tm_hour %= 12;
+                                if (!(status1 & BIT(1))) time->tm_hour %= 12;*/
 
                                 // Save to the date and time registers in BCD format
                                 // Index 3 contains the day of the week, but most things don't care
-                                dateTime[0] = ((time->tm_year / 10) << 4) | (time->tm_year % 10);
-                                dateTime[1] = ((time->tm_mon  / 10) << 4) | (time->tm_mon  % 10);
-                                dateTime[2] = ((time->tm_mday / 10) << 4) | (time->tm_mday % 10);
-                                dateTime[4] = ((time->tm_hour / 10) << 4) | (time->tm_hour % 10);
-                                dateTime[5] = ((time->tm_min  / 10) << 4) | (time->tm_min  % 10);
-                                dateTime[6] = ((time->tm_sec  / 10) << 4) | (time->tm_sec  % 10);
+                                dateTime[0] = default_value;
+                                dateTime[1] = default_value;
+                                dateTime[2] = default_value;
+                                dateTime[4] = default_value;
+                                dateTime[5] = default_value;
+                                dateTime[6] = default_value;
 
                                 // Set the AM/PM bit
-                                if (hour >= 12) dateTime[4] |= BIT(6);
+                               // if (hour >= 12) dateTime[4] |= BIT(6);
                             }
 
-                            value |= ((dateTime[(writeCount / 8) - 1] >> (writeCount % 8)) & BIT(0));
+                            value |= default_value;//((dateTime[(writeCount / 8) - 1] >> (writeCount % 8)) & BIT(0));
                             break;
                         }
 
@@ -106,29 +107,29 @@ void Rtc::writeRtc(uint8_t value)
                             if (writeCount == 8)
                             {
                                 // Get the local time
-                                std::time_t t = std::time(nullptr);
+                               /* std::time_t t = std::time(nullptr);
                                 std::tm *time = std::localtime(&t);
 
                                 // Convert to 12-hour mode if enabled
                                 uint8_t hour = time->tm_hour;
-                                if (!(status1 & BIT(1))) time->tm_hour %= 12;
+                                if (!(status1 & BIT(1))) time->tm_hour %= 12;*/
 
                                 // Save to the date and time registers in BCD format
-                                dateTime[4] = ((time->tm_hour / 10) << 4) | (time->tm_hour % 10);
-                                dateTime[5] = ((time->tm_min  / 10) << 4) | (time->tm_min  % 10);
-                                dateTime[6] = ((time->tm_sec  / 10) << 4) | (time->tm_sec  % 10);
+                                dateTime[4] = default_value;
+                                dateTime[5] = default_value;
+                                dateTime[6] = default_value;
 
                                 // Set the AM/PM bit
-                                if (hour >= 12) dateTime[4] |= BIT(6);
+                                //if (hour >= 12) dateTime[4] |= BIT(6);
                             }
 
-                            value |= ((dateTime[(writeCount / 8) - 5] >> (writeCount % 8)) & BIT(0));
+                            value |= default_value;//((dateTime[(writeCount / 8) - 5] >> (writeCount % 8)) & BIT(0));
                             break;
                         }
 
                         default:
                         {
-                            printf("Read from unknown RTC registers: %d\n", (command & 0x0E) >> 1);
+                            //printf("Read from unknown RTC registers: %d\n", (command & 0x0E) >> 1);
                             break;
                         }
                     }
@@ -157,11 +158,11 @@ void Rtc::writeRtc(uint8_t value)
                 writeCount++;
             }
         }
-        else if (!(rtc & BIT(1)) && (value & BIT(1)) && !(value & BIT(4))) // SCK low to high, read
+        /*else if (!(rtc & BIT(1)) && (value & BIT(1)) && !(value & BIT(4))) // SCK low to high, read
         {
             // Read bits can still be read after switching SCK to high, so keep the previous bit value
             value = (value & ~BIT(0)) | (rtc & BIT(0));
-        }
+        }*/
     }
     else // CS low
     {

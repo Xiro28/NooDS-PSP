@@ -57,8 +57,8 @@ class Core
         int  getMEFps()    { return MEfps;     }
 
         bool SkipFrame = false;
-        bool SwapDisplayRender = true;
-        int  CurrVcount = 0;
+        bool CheckTimer = false;
+        bool CheckDMA = false;
 
         void enterGbaMode();
 

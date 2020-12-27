@@ -353,10 +353,10 @@ void Gpu2D::drawText(int bg, int line)
     // If 3D is enabled, render it to BG0 in text mode
     if (bg == 0 && (dispCnt & BIT(3)))
     {
-        /*sceKernelDcacheWritebackInvalidateAll();
+        sceKernelDcacheWritebackInvalidateAll();
 		sceDmacMemcpy(layers[bg], core->gpu3DRenderer.getFramebuffer(line),  256 * sizeof(uint32_t));
-		sceKernelDcacheWritebackInvalidateAll();*/
-        memcpy(layers[bg], core->gpu3DRenderer.getFramebuffer(line), 256 * sizeof(uint32_t));
+		sceKernelDcacheWritebackInvalidateAll();
+        //memcpy(layers[bg], core->gpu3DRenderer.getFramebuffer(line), 256 * sizeof(uint32_t));
         return;
     }
 

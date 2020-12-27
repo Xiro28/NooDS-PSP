@@ -83,28 +83,12 @@ void Core::runGbaFrame()
 }
 
 
-int PC_Core(int addr){
-    Core * core = (Core*)addr;
+int ME_Core(int i){
+    Core * c = (Core*)i;
 
-    if (core->CurrVcount >= 192) return 1;
-
-   // for (int k = 0; k < 192;k++)
-   {
-        core->gpu2D[core->SwapDisplayRender].drawScanline(core->CurrVcount );
-        core->gpu2D[!core->SwapDisplayRender].drawScanline(core->CurrVcount );
-        core->dma[0].trigger(2);
-    }
-
-    return 1;
-}
-
-int ME_Core(int addr){
-    Core * core = (Core*)addr;
-
-   for (int k = 0; k < 192;k++)
-   {
-        core->gpu2D[core->SwapDisplayRender].drawScanline(k);
-        core->dma[0].trigger(2);
+    for (int k = 0; k < 263;k++){
+        if (k < 192) c->gpu.scanline256();
+        c->gpu.scanline355();
     }
 
     return 1;
@@ -115,21 +99,18 @@ uint8_t frameskip = 0;
 
 void Core::runNdsFrame()
 {
-   sceKernelDcacheWritebackInvalidateAll();
+    sceKernelDcacheWritebackInvalidateAll();
 
-    /*if (ME_JobReturnValue() || first){
-        SwapDisplayRender = !SwapDisplayRender;
+    if (ME_JobReturnValue() || first){
+        SkipFrame = !SkipFrame;
         J_EXECUTE_ME_ONCE(ME_Core,(int)this);
-
-        //if (SwapDisplayRender) SkipFrame = !SkipFrame; 
-
         first = false;
-    }*/
+    }
+
+    //ME_Core((int)this);
 
     for (int i = 0; i < 263; i++) // 263 scanlines
     {
-        CurrVcount = i;
-
         for (int j = 0; j < 1065; j++) // 355 dots per scanline * 3
         {
             // Run the ARM9 at twice the speed of the ARM7
@@ -157,16 +138,13 @@ void Core::runNdsFrame()
             if (CPU_HACK && !interpreter[0].shouldRun() && !interpreter[1].shouldRun())
                 break;
         }
-        
-        PC_Core((int)this);
-        gpu.scanline256();
-        gpu.scanline355();
+
+        if (!SkipFrame && i < 192)  gpu2D[0].drawScanline(i);
     }
 
     // Copy the completed sub-framebuffers to the main framebuffer
-    if (/*ME_JobReturnValue() && */gpu.readPowCnt1() & BIT(0)) // LCDs enabled
+    if (ME_JobReturnValue() && gpu.readPowCnt1() & BIT(0)) // LCDs enabled
     {
-
         sceKernelDcacheWritebackInvalidateAll();
         if (gpu.readPowCnt1() & BIT(15)) // Display swap
         {
