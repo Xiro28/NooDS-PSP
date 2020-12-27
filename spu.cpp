@@ -998,8 +998,8 @@ void Spu::writeMainSoundCnt(uint16_t mask, uint16_t value)
 void Spu::writeSoundBias(uint16_t mask, uint16_t value)
 {
     // Write to the SOUNDBIAS register
-    /*mask &= 0x03FF;
-    soundBias = (soundBias & ~mask) | (value & mask);*/
+    mask &= 0x03FF;
+    soundBias = (soundBias & ~mask) | (value & mask);
 }
 
 void Spu::writeSndCapCnt(int channel, uint8_t value)
