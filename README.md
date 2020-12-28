@@ -12,3 +12,9 @@ Then rename them as follows:
   - Arm9 bios -> bios9.bin
   - Arm7 bios -> bios7.bin
   - Firmware  -> firmware.bin
+
+#TODO:
+  - Hardware 3D rendering 
+  - GUI
+  - JIT 
+  - Sound
