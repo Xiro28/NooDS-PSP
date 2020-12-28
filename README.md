@@ -13,7 +13,7 @@ Then rename them as follows:
   - Arm7 bios -> bios7.bin
   - Firmware  -> firmware.bin
 
-#TODO:
+# TODO:
   - Hardware 3D rendering 
   - GUI
   - JIT 
