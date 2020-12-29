@@ -26,6 +26,8 @@
 #include "melib.h"
 #include "psp/GPU/draw.h"
 
+Core * exCore;
+
 Core::Core(std::string ndsPath, std::string gbaPath):
     cartridge(this), cp15(this), divSqrt(this), dma { Dma(this, 0), Dma(this, 1) }, gpu(this), gpu2D { Gpu2D(this, 0),
     Gpu2D(this, 1) }, gpu3D(this), gpu3DRenderer(this), input(this), interpreter { Interpreter(this, 0), Interpreter(this, 1) },
@@ -33,6 +35,8 @@ Core::Core(std::string ndsPath, std::string gbaPath):
 {
 
     J_Init(false);
+
+    exCore = this;
 
     // Load the NDS BIOS and firmware unless directly booting a GBA ROM
     if (ndsPath != "" || gbaPath == "" || !Settings::getDirectBoot())
@@ -84,27 +88,24 @@ void Core::runGbaFrame()
 
 
 int PC_Core(int addr){
-    Core * core = (Core*)addr;
 
-    if (core->CurrVcount >= 192) return 1;
+    if (exCore->CurrVcount >= 192) return 1;
 
    // for (int k = 0; k < 192;k++)
    {
-        core->gpu2D[core->SwapDisplayRender].drawScanline(core->CurrVcount );
-        core->gpu2D[!core->SwapDisplayRender].drawScanline(core->CurrVcount );
-        core->dma[0].trigger(2);
+        exCore->gpu2D[exCore->SwapDisplayRender].drawScanline(exCore->CurrVcount );
+        exCore->gpu2D[!exCore->SwapDisplayRender].drawScanline(exCore->CurrVcount );
+        exCore->dma[0].trigger(2);
     }
 
     return 1;
 }
 
 int ME_Core(int addr){
-    Core * core = (Core*)addr;
-
    for (int k = 0; k < 192;k++)
    {
-        core->gpu2D[core->SwapDisplayRender].drawScanline(k);
-        core->dma[0].trigger(2);
+        exCore->gpu2D[exCore->SwapDisplayRender].drawScanline(k);
+        exCore->dma[0].trigger(2);
     }
 
     return 1;
@@ -117,18 +118,18 @@ void Core::runNdsFrame()
 {
    sceKernelDcacheWritebackInvalidateAll();
 
-    /*if (ME_JobReturnValue() || first){
+    if (ME_JobReturnValue() || first){
         SwapDisplayRender = !SwapDisplayRender;
-        J_EXECUTE_ME_ONCE(ME_Core,(int)this);
+        J_EXECUTE_ME_ONCE(ME_Core,0);
 
-        //if (SwapDisplayRender) SkipFrame = !SkipFrame; 
+        if (SwapDisplayRender) SkipFrame = !SkipFrame; 
 
         first = false;
-    }*/
+    }
 
     for (int i = 0; i < 263; i++) // 263 scanlines
     {
-        CurrVcount = i;
+       // CurrVcount = i;
 
         for (int j = 0; j < 1065; j++) // 355 dots per scanline * 3
         {
@@ -158,13 +159,13 @@ void Core::runNdsFrame()
                 break;
         }
         
-        PC_Core((int)this);
+        //PC_Core(0);
         gpu.scanline256();
         gpu.scanline355();
     }
 
     // Copy the completed sub-framebuffers to the main framebuffer
-    if (/*ME_JobReturnValue() && */gpu.readPowCnt1() & BIT(0)) // LCDs enabled
+    if (!SkipFrame && gpu.readPowCnt1() & BIT(0)) // LCDs enabled
     {
 
         sceKernelDcacheWritebackInvalidateAll();
