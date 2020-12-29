@@ -46,7 +46,10 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_VFPU | THREAD_ATTR_USER);
 #include "../core.h"
 #include "../settings.h"
 #include "../gpu.h"
+
 #include "GPU/draw.h"
+
+#include "melib.h"
 
 
 
@@ -166,23 +169,68 @@ if ((dir = opendir (root)) != NULL) {
 
 char ROM_PATH[256];
 
-int selpos=0;
+int selpos=0, oldpos = -1, oldpage = 0;
 void DisplayFileList()
 {
-	int c,x,y;
-	x=28; y=50;
-	for (c=0;c<filelist.cnt;c++){
-    
-		if(selpos == c){
-      pspDebugScreenSetTextColor(0X5555FFFF);
-    }else{
-			pspDebugScreenSetTextColor(0XFFFFFFFF);
-    }
+		/*DrawRom(root, &filelist, selpos, true);
+	return;*/
 
-    pspDebugScreenPrintf("%s\n",filelist.fname[c].name);
-		y+=10;
-			
+	static const int MAX_ROM = filelist.cnt;
+	static const int ROM_SHOWN = 20;
+
+	const int CURR_PAGE = (selpos / ROM_SHOWN);
+
+	//const int HOW_MANY = (MAX_ROM - (CURR_PAGE * 15));
+
+	const int index = CURR_PAGE * ROM_SHOWN;
+
+	if (selpos == oldpos) return;
+
+	//printf("Curr page: %d, index: %d \n", CURR_PAGE,index);
+
+	//pspDebugScreenClear();
+	//DrawRom(root, &filelist, selpos, true);
+
+	bool max_reached = false;
+
+	oldpos = selpos;
+	
+	/*if (oldpage != CURR_PAGE)
+		pspDebugScreenClear();
+
+	oldpage = CURR_PAGE;*/
+
+
+	if (CURR_PAGE > 0)
+		pspDebugScreenPrintf("\nBack\n");
+	else 
+		pspDebugScreenPrintf("\n\n");
+
+
+	for (int c = index;c < index + ROM_SHOWN;c++) {
+
+		if (c >= MAX_ROM) {
+			pspDebugScreenPrintf("\n");
+			max_reached = true;
+			continue;
+		}
+
+		if (selpos == c) {
+			pspDebugScreenSetTextColor(0x0000ffff);
+		}
+		else {
+			pspDebugScreenSetTextColor(0xffffffff);
+		}
+
+		pspDebugScreenPrintf("\n%s", filelist.fname[c].name);
 	}
+
+	pspDebugScreenSetTextColor(0xffffffff);
+
+	if(!max_reached)
+		pspDebugScreenPrintf("\n\nNext Page");
+	else
+		pspDebugScreenPrintf("\n\n\n");
 }
 
 void ROM_CHOOSER()
@@ -199,9 +247,10 @@ void ROM_CHOOSER()
 	long tm;
 	while(1){
     sceDisplayWaitVblankStart();
-    pspDebugScreenSetXY(1, 0);
-	pspDebugScreenPrintf(" NooDS\n");
+    pspDebugScreenSetXY(0, 0);
+	pspDebugScreenPrintf(" NooDS PSP\n");
     pspDebugScreenPrintf(" press CROSS for launch your game\n");
+    pspDebugScreenPrintf(" press TRIANGLE to boot nds firmware\n");
     pspDebugScreenPrintf(" press SQUARE now for exit\n");
 		DisplayFileList();
 		if(sceCtrlPeekBufferPositive(&pad, 1))
@@ -307,6 +356,7 @@ void Manager(){
 	  }
 
 	if(pad.Buttons & PSP_CTRL_HOME){
+		KILL_ME();
 		sceKernelExitGame();
 	}
 
