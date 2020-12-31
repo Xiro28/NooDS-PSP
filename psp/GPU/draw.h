@@ -29,8 +29,8 @@ class Draw
             if (x < 240)  x = 480;
             if (x >= 480) x = 240;
 
-            if (y < 40)   y = 232;
-            if (y >= 232) y = 40;
+            if (y < 40)   y = 230;
+            if (y >= 230) y = 40;
 
             TX = x; TY = y;
         }
@@ -46,7 +46,7 @@ class Draw
         const uint32_t    VRAM_START = 0x4000000;
         const uint32_t    VRAM_SIZE  = 0x00200000;
 
-        uint16_t TX = 0, TY = 0;
+        uint16_t TX = 240, TY = 40;
 
         int        TexFilter;
         int        PixelFormat;

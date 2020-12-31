@@ -37,8 +37,10 @@ Draw::Draw()
 	sceGuStart(GU_DIRECT, list);
  	
 	sceGuDrawBuffer(GU_PSM_5551, frameBuffer, BUF_WIDTH/2);
-	sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, (void*)(sizeof(u32) *
-    BUF_WIDTH * SCR_HEIGHT) , BUF_WIDTH);
+	/*sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, (void*)(sizeof(u32) *
+    BUF_WIDTH * SCR_HEIGHT) , BUF_WIDTH);*/
+
+	sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, frameBuffer , BUF_WIDTH);
 
 	sceGuClearColor(0xFF404040);
     sceGuDisable(GU_SCISSOR_TEST);
@@ -47,6 +49,8 @@ Draw::Draw()
 	sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 
 	sceGuDisplay(GU_TRUE);
+
+	sceGuSwapBuffers();
 }
 
 void Draw::SetScreenBuffer(bool upperScr,uint32_t * buff)
@@ -109,10 +113,9 @@ void Draw::DrawFrame(uint16_t * top,uint16_t * bottom)
 {
 	sceGuStart(GU_DIRECT, list);
 
-	sceGuEnable(GU_TEXTURE_2D);
+	//sceGuSwapBuffers();
 
-	sceGuClearColor(0 /*0x00ff00ff*/);
-    sceGuClear(GU_COLOR_BUFFER_BIT);
+	sceGuEnable(GU_TEXTURE_2D);
 
     sceGuTexMode(GU_PSM_5551, 0, 0, 0);
     sceGuTexImage(0, 256, 256, 256, top);
@@ -137,11 +140,8 @@ void Draw::DrawFrame(uint16_t * top,uint16_t * bottom)
 	DrawTouchPointer();
 
 	sceGuFinish();
-	sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 
 	sceKernelDcacheWritebackAll();
-
-	sceGuSwapBuffers();
 
 	sceGuDisplay(GU_TRUE);
 }
