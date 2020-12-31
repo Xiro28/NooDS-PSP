@@ -302,6 +302,7 @@ void Gpu2D::finishScanline(int line)
         {
             // Get the brightness factor
             int factor = (masterBright & 0x001F);
+            if (factor==0) break;
             if (factor > 16) factor = 16;
 
             for (int i = 0; i < 256; i++)
@@ -316,7 +317,7 @@ void Gpu2D::finishScanline(int line)
                 r += (63 - r) * factor / 16;
                 g += (63 - g) * factor / 16;
                 b += (63 - b) * factor / 16;
-                *pixel = (b << 10) | (g << 5) | r;
+                *pixel = (0 << 15) | (b << 10) | (g << 5) | r;
             }
 
             break;
@@ -326,6 +327,7 @@ void Gpu2D::finishScanline(int line)
         {
             // Get the brightness factor
             int factor = (masterBright & 0x001F);
+            if (factor==0) break;
             if (factor > 16) factor = 16;
 
             for (int i = 0; i < 256; i++)
@@ -335,12 +337,13 @@ void Gpu2D::finishScanline(int line)
                 uint8_t r = (*pixel >>  0) & 0x3F;
                 uint8_t g = (*pixel >>  5) & 0x3F;
                 uint8_t b = (*pixel >> 10) & 0x3F;
+                uint8_t a = (*pixel >> 15) & 0x2;
 
                 // Adjust the values and put them back
                 r -= r * factor / 16;
                 g -= g * factor / 16;
                 b -= b * factor / 16;
-                *pixel = (b << 10) | (g << 5) | r;
+                *pixel =  (a << 15) | (b << 10) | (g << 5) | r;
             }
 
             break;

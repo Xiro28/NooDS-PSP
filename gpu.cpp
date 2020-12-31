@@ -91,65 +91,47 @@ void Gpu::scanline256()
     // Draw 3D scanlines 48 lines in advance, if the current 3D is dirty
     // If the 3D parameters haven't changed since the last frame, there's no need to draw it again
     // Bit 0 of the dirty variable represents invalidation, and bit 1 represents a frame currently drawing
-    if (dirty3D && (core->gpu2D[0].readDispCnt() & BIT(3)) && ((vCount + 48) % 263) < 192)
+    /*if (dirty3D && (core->gpu2D[0].readDispCnt() & BIT(3)) && ((vCount + 48) % 263) < 192)
     {
         if (vCount == 215) dirty3D = BIT(1);
         core->gpu3DRenderer.drawScanline((vCount + 48) % 263);
         if (vCount == 143) dirty3D &= ~BIT(1);
-    }
+    }*/
 
-    for (int i = 0; i < 2; i++)
+    //for (int i = 0; i < 2; i++)
     {
         // Set the H-blank flag
-        dispStat[i] |= BIT(1);
+        dispStat[core->SwapDisplayRender] |= BIT(1);
 
         // Trigger an H-blank IRQ if enabled
-        if (dispStat[i] & BIT(4))
-            core->interpreter[i].sendInterrupt(1);
+        if (dispStat[core->SwapDisplayRender] & BIT(4))
+            core->interpreter[core->SwapDisplayRender].sendInterrupt(1);
     }
 }
 
 void Gpu::scanline355()
 {
-    for (int i = 0; i < 2; i++)
-    {
-        // Check if the current scanline matches the V-counter
-        if (vCount == ((dispStat[i] >> 8) | ((dispStat[i] & BIT(7)) << 1)))
-        {
-            // Set the V-counter flag
-            dispStat[i] |= BIT(2);
-
-            // Trigger a V-counter IRQ if enabled
-            if (dispStat[i] & BIT(5))
-                core->interpreter[i].sendInterrupt(2);
-        }
-        else if (dispStat[i] & BIT(2))
-        {
-            // Clear the V-counter flag on the next line
-            dispStat[i] &= ~BIT(2);
-        }
-
-        // Clear the H-blank flag
-        dispStat[i] &= ~BIT(1);
-    }
-
     // Move to the next scanline
     switch (++vCount)
     {
         case 192: // End of visible scanlines
         {
-            for (int i = 0; i < 2; i++)
-            {
-                // Set the V-blank flag
-                dispStat[i] |= BIT(0);
+            // Set the V-blank flag
+            dispStat[0] |= BIT(0);
 
-                // Trigger a V-blank IRQ if enabled
-                if (dispStat[i] & BIT(3))
-                    core->interpreter[i].sendInterrupt(0);
+            // Trigger a V-blank IRQ if enabled
+            if (dispStat[0] & BIT(3))
+                core->interpreter[0].sendInterrupt(0);
+            
+           // core->dma[0].trigger(1);
 
-                // Trigger V-blank DMA transfers
-                core->dma[i].trigger(1);
-            }
+            dispStat[1] |= BIT(0);
+
+            // Trigger a V-blank IRQ if enabled
+            if (dispStat[1] & BIT(3))
+                core->interpreter[1].sendInterrupt(0);
+
+            //core->dma[1].trigger(1);
 
             // Swap the buffers of the 3D engine if needed
             if (core->gpu3D.shouldSwap())
@@ -178,6 +160,25 @@ void Gpu::scanline355()
     // Signal that the next scanline has started
   /*  if (vCount < 192)
         drawing = true;*/
+
+     for (int i = 0; i < 2; i++)
+    {
+        // Check if the current scanline matches the V-counter
+        if (vCount == ((dispStat[i] >> 8) | ((dispStat[i] & BIT(7)) << 1)))
+        {
+            // Set the V-counter flag
+            dispStat[i] |= BIT(2);
+        }
+        else if (dispStat[i] & BIT(2))
+        {
+            // Clear the V-counter flag on the next line
+            dispStat[i] &= ~BIT(2);
+        }
+
+        // Clear the H-blank flag
+        dispStat[i] &= ~BIT(1);
+    }
+
 }
 
 void Gpu::drawGbaThreaded()

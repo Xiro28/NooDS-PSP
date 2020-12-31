@@ -45,7 +45,7 @@ void Rtc::writeRtc(uint8_t value)
 {
     if (value & BIT(2)) // CS high
     {
-        if ((rtc & BIT(1)) && !(value & BIT(1))) // SCK high to low
+        /*if ((rtc & BIT(1)) && !(value & BIT(1))) // SCK high to low
         {
             if (writeCount < 8)
             {
@@ -161,7 +161,7 @@ void Rtc::writeRtc(uint8_t value)
         {
             // Read bits can still be read after switching SCK to high, so keep the previous bit value
             value = (value & ~BIT(0)) | (rtc & BIT(0));
-        }
+        }*/
     }
     else // CS low
     {

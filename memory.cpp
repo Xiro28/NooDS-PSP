@@ -354,6 +354,8 @@ template <typename T> void Memory::write(bool cpu, uint32_t address, T value)
             {
                 if (address & 0x00800000) // WiFi regions
                 {
+                    return; //Disable Wifi on PSP
+
                     if (sizeof(T) == 1) return; // Ignore single-byte writes
                     address &= ~0x00008000; // Mirror the regions
                     if (address >= 0x04804000 && address < 0x04806000) // WiFi RAM
@@ -2033,7 +2035,7 @@ template <typename T> void Memory::ioWrite7(uint32_t address, T value)
             case 0x400010D: base -= 0x400010C; size = 2; core->timers[1].writeTmCntL(3, mask << (base * 8), data << (base * 8));     break; // TM3CNT_L (ARM7)
             case 0x400010E:
             case 0x400010F: base -= 0x400010E; size = 2; core->timers[1].writeTmCntH(3, mask << (base * 8), data << (base * 8));     break; // TM3CNT_H (ARM7)
-            case 0x4000138: base -= 0x4000138; size = 1; core->rtc.writeRtc(data << (base * 8));                                     break; // RTC
+            case 0x4000138: base -= 0x4000138; size = 1; break;//core->rtc.writeRtc(data << (base * 8));                                     break; // RTC
             case 0x4000180:
             case 0x4000181: base -= 0x4000180; size = 2; core->ipc.writeIpcSync(1, mask << (base * 8), data << (base * 8));          break; // IPCSYNC (ARM7)
             case 0x4000184:
@@ -2331,8 +2333,8 @@ template <typename T> void Memory::ioWrite7(uint32_t address, T value)
             case 0x4000501: base -= 0x4000500; size = 2; core->spu.writeMainSoundCnt(mask << (base * 8), data << (base * 8));        break; // SOUNDCNT*/
             case 0x4000504:
             case 0x4000505: base -= 0x4000504; size = 2; core->spu.writeSoundBias(mask << (base * 8), data << (base * 8));           break; // SOUNDBIAS
-            case 0x4000508: base -= 0x4000508; size = 1; core->spu.writeSndCapCnt(0, data << (base * 8));                            break; // SNDCAP0CNT
-            case 0x4000509: base -= 0x4000509; size = 1; core->spu.writeSndCapCnt(1, data << (base * 8));                            break; // SNDCAP1CNT
+            case 0x4000508: base -= 0x4000508; size = 1; break;//core->spu.writeSndCapCnt(0, data << (base * 8));                            break; // SNDCAP0CNT
+            case 0x4000509: base -= 0x4000509; size = 1; break;//core->spu.writeSndCapCnt(1, data << (base * 8));                            break; // SNDCAP1CNT
             /*case 0x4000510:
             case 0x4000511:
             case 0x4000512:

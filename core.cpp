@@ -93,20 +93,45 @@ int PC_Core(int addr){
 
    // for (int k = 0; k < 192;k++)
    {
-        exCore->gpu2D[exCore->SwapDisplayRender].drawScanline(exCore->CurrVcount );
-        exCore->gpu2D[!exCore->SwapDisplayRender].drawScanline(exCore->CurrVcount );
+        exCore->gpu2D[0].drawScanline(exCore->CurrVcount);
+        exCore->gpu2D[1].drawScanline(exCore->CurrVcount);
         exCore->dma[0].trigger(2);
+
     }
+
+    // Trigger a V-counter IRQ if enabled
+    if (exCore->gpu.dispStat[0] & BIT(5))
+        exCore->interpreter[0].sendInterrupt(2);
+
+    // Trigger a V-counter IRQ if enabled
+    if (exCore->gpu.dispStat[1] & BIT(5))
+        exCore->interpreter[1].sendInterrupt(2);
+
+    exCore->dma[0].trigger(1);
+    exCore->dma[1].trigger(1);
 
     return 1;
 }
 
-int ME_Core(int addr){
+int ME_Core(int _core){
+
+    Core * core = (Core*)_core;
+
    for (int k = 0; k < 192;k++)
    {
-        exCore->gpu2D[exCore->SwapDisplayRender].drawScanline(k);
-        exCore->dma[0].trigger(2);
+        core->gpu2D[core->SwapDisplayRender].drawScanline(k);
+        core->dma[0].trigger(2);
+
+        // Trigger a V-counter IRQ if enabled
+        if (core->gpu.dispStat[core->SwapDisplayRender] & BIT(5))
+            core->interpreter[core->SwapDisplayRender].sendInterrupt(2);
     }
+
+     // Trigger a V-counter IRQ if enabled
+    if (core->gpu.dispStat[core->SwapDisplayRender] & BIT(5))
+        core->interpreter[core->SwapDisplayRender].sendInterrupt(2);
+
+    core->dma[core->SwapDisplayRender].trigger(1);
 
     return 1;
 }
@@ -116,20 +141,17 @@ uint8_t frameskip = 0;
 
 void Core::runNdsFrame()
 {
-   sceKernelDcacheWritebackInvalidateAll();
-
+  
     if (ME_JobReturnValue() || first){
         SwapDisplayRender = !SwapDisplayRender;
-        J_EXECUTE_ME_ONCE(ME_Core,0);
-
-        if (SwapDisplayRender) SkipFrame = !SkipFrame; 
-
+        J_EXECUTE_ME_ONCE(ME_Core,(int)this);
         first = false;
+        MEfpsCount++;
     }
 
     for (int i = 0; i < 263; i++) // 263 scanlines
     {
-       // CurrVcount = i;
+        //CurrVcount = i;
 
         for (int j = 0; j < 1065; j++) // 355 dots per scanline * 3
         {
@@ -155,7 +177,7 @@ void Core::runNdsFrame()
             if (gpu3D.shouldRun()) gpu3D.runCycle();
 
             //Stop the loop if both halted
-            if (CPU_HACK && !interpreter[0].shouldRun() && !interpreter[1].shouldRun())
+            if (!interpreter[0].shouldRun() && !interpreter[1].shouldRun())
                 break;
         }
         
@@ -165,7 +187,7 @@ void Core::runNdsFrame()
     }
 
     // Copy the completed sub-framebuffers to the main framebuffer
-    if (!SkipFrame && gpu.readPowCnt1() & BIT(0)) // LCDs enabled
+    if (SwapDisplayRender && gpu.readPowCnt1() & BIT(0)) // LCDs enabled
     {
 
         sceKernelDcacheWritebackInvalidateAll();
@@ -178,7 +200,6 @@ void Core::runNdsFrame()
             psp_render->DrawFrame(gpu2D[1].getFramebuffer(0),gpu2D[0].getFramebuffer(0));
         }
 
-         MEfpsCount++;
     }
 
     fpsCount++;
