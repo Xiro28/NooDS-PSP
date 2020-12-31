@@ -51,8 +51,6 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_VFPU | THREAD_ATTR_USER);
 
 #include "melib.h"
 
-
-
 ScreenLayout layout; 
 Core *core;
 
@@ -167,39 +165,40 @@ if ((dir = opendir (root)) != NULL) {
 }
 }
 
+char * selectionToChar(int selection)
+{
+    switch (selection)
+    {
+        case 1:  return  "  0.5KB"; //  0.5KB
+        case 2:  return  "    8KB"; //    8KB
+        case 3:  return  "   32KB"; //   32KB
+        case 4:  return  "   64KB"; //   64KB
+        case 5:  return  "  128KB"; //  128KB
+        case 6:  return  "  256KB"; //  256KB
+        case 7:  return  "  512KB"; //  512KB
+        case 8:  return  " 1024KB"; // 1024KB
+        case 9:  return  " 8192KB"; // 8192KB
+        default: return  "    0KB"; // None
+    }
+}
+
 char ROM_PATH[256];
 
 int selpos=0, oldpos = -1, oldpage = 0;
 void DisplayFileList()
 {
-		/*DrawRom(root, &filelist, selpos, true);
-	return;*/
-
 	static const int MAX_ROM = filelist.cnt;
-	static const int ROM_SHOWN = 20;
+	static const int ROM_SHOWN = 24;
 
 	const int CURR_PAGE = (selpos / ROM_SHOWN);
-
-	//const int HOW_MANY = (MAX_ROM - (CURR_PAGE * 15));
 
 	const int index = CURR_PAGE * ROM_SHOWN;
 
 	if (selpos == oldpos) return;
 
-	//printf("Curr page: %d, index: %d \n", CURR_PAGE,index);
-
-	//pspDebugScreenClear();
-	//DrawRom(root, &filelist, selpos, true);
-
 	bool max_reached = false;
 
 	oldpos = selpos;
-	
-	/*if (oldpage != CURR_PAGE)
-		pspDebugScreenClear();
-
-	oldpage = CURR_PAGE;*/
-
 
 	if (CURR_PAGE > 0)
 		pspDebugScreenPrintf("\nBack\n");
@@ -247,11 +246,13 @@ void ROM_CHOOSER()
 	long tm;
 	while(1){
     sceDisplayWaitVblankStart();
-    pspDebugScreenSetXY(0, 0);
-	pspDebugScreenPrintf(" NooDS PSP\n");
+    pspDebugScreenSetXY(0, 1);
+	pspDebugScreenPrintf(" NooDS PSP");
+	pspDebugScreenSetXY(48, 1);
+	pspDebugScreenPrintf(" Save size: %s ", selectionToChar(memory));
     pspDebugScreenPrintf(" press CROSS for launch your game\n");
     pspDebugScreenPrintf(" press TRIANGLE to boot nds firmware\n");
-    pspDebugScreenPrintf(" press SQUARE now for exit\n");
+    pspDebugScreenPrintf(" press SQUARE now for exit");
 		DisplayFileList();
 		if(sceCtrlPeekBufferPositive(&pad, 1))
 		{
@@ -276,11 +277,22 @@ void ROM_CHOOSER()
 				if(pad.Buttons & PSP_CTRL_RTRIGGER)
 				{
 					memory++;
+					if (memory > 9) memory = 9;
 				}
 
 				if(pad.Buttons & PSP_CTRL_LTRIGGER)
 				{
 					memory--;
+					if (memory <= 0) memory = 0;
+				}
+
+				if(pad.Buttons & PSP_CTRL_LEFT){
+					selpos -= 25;
+					if(selpos < 0)selpos=0;
+				}
+				if(pad.Buttons & PSP_CTRL_RIGHT){
+					selpos += 25;
+					if(selpos >= filelist.cnt -1)selpos=filelist.cnt-1;
 				}
 			
 				if(pad.Buttons & PSP_CTRL_UP){
@@ -302,8 +314,6 @@ bool running = false;
 bool skipframe = true;
 bool done = true;
 
-bool CPU_HACK = true;
-
 void Manager(){ 
 
     SceCtrlData pad;
@@ -315,14 +325,6 @@ void Manager(){
 
 	pspDebugScreenSetXY(0, 1);
 	pspDebugScreenPrintf("FPS:   %d   ME:    %d    ",core->getFps(),core->getMEFps());
-
-	if (pad.Buttons & PSP_CTRL_SELECT && pad.Buttons & PSP_CTRL_DOWN){
-		CPU_HACK = false;
-	}
-
-	if (pad.Buttons & PSP_CTRL_SELECT && pad.Buttons & PSP_CTRL_UP){
-		CPU_HACK = true;
-	}
 
 	if (pad.Lx < 10) {
 		--TouchX; --TouchX;
@@ -414,6 +416,7 @@ int main() {
       Setting("screenFilter",   &screenFilter,   false),
       Setting("showFpsCounter", &showFpsCounter, false)
   };
+
  
   ROM_CHOOSER();
 
