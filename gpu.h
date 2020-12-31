@@ -35,6 +35,8 @@ class Gpu
         Gpu(Core *core);
         ~Gpu();
 
+        uint16_t dispStat[2] = {};
+
         uint32_t *getFrame(bool gbaCrop);
 
         void gbaScanline240();
@@ -64,7 +66,6 @@ class Gpu
         bool displayCapture = false;
         uint8_t dirty3D = 0;
 
-        uint16_t dispStat[2] = {};
         uint16_t vCount = 0;
         uint32_t dispCapCnt = 0;
         uint16_t powCnt1 = 0;
