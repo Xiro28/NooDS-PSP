@@ -25,11 +25,12 @@ void* frameBuffer =  reinterpret_cast<void*>(0);
 
 void* list = memalign(16, 2048);
 
-struct Vertex
+struct PSPVertex
 {
 	u16 u, v;
 	s16 x, y, z;
 };
+
 
 Draw::Draw()
 {
@@ -37,9 +38,6 @@ Draw::Draw()
 	sceGuStart(GU_DIRECT, list);
  	
 	sceGuDrawBuffer(GU_PSM_5551, frameBuffer, BUF_WIDTH/2);
-	/*sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, (void*)(sizeof(u32) *
-    BUF_WIDTH * SCR_HEIGHT) , BUF_WIDTH);*/
-
 	sceGuDispBuffer(SCR_WIDTH, SCR_HEIGHT, frameBuffer , BUF_WIDTH);
 
 	sceGuClearColor(0xFF404040);
@@ -47,10 +45,12 @@ Draw::Draw()
 
 	sceGuFinish();
 	sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
+	
 
 	sceGuDisplay(GU_TRUE);
 
 	sceGuSwapBuffers();
+
 }
 
 void Draw::SetScreenBuffer(bool upperScr,uint32_t * buff)
@@ -62,13 +62,14 @@ void Draw::DrawFPS()
 
 }
 
+
+const int sw = 254;
+static const int scale = (int)((float)sw * (float)SLICE_SIZE) / (float)256;
 void DrawSliced(int dx){
 
-	const int sw = 240;
+    for (int start = 0, end = sw; start < end; start += SLICE_SIZE, dx += scale) {
 
-    for (int start = 0, end = sw; start < end; start += SLICE_SIZE, dx += SLICE_SIZE) {
-
-		struct Vertex* vertices = (struct Vertex*)sceGuGetMemory(2 * sizeof(struct Vertex));
+		struct PSPVertex* vertices = (struct PSPVertex*)sceGuGetMemory(2 * sizeof(struct PSPVertex));
 		int width = (start + SLICE_SIZE) < end ? SLICE_SIZE : end - start;
 
 		vertices[0].u = start;
@@ -79,7 +80,7 @@ void DrawSliced(int dx){
 
 		vertices[1].u = start + width;
 		vertices[1].v = 192;
-		vertices[1].x = dx + width;
+		vertices[1].x = dx + scale;
 		vertices[1].y = 192+40;
 		vertices[1].z = 0;
 
@@ -89,7 +90,7 @@ void DrawSliced(int dx){
 
 void Draw::DrawTouchPointer(){
 
-	struct Vertex* vertices = (struct Vertex*)sceGuGetMemory(2 * sizeof(struct Vertex));
+	struct PSPVertex* vertices = (struct PSPVertex*)sceGuGetMemory(2 * sizeof(struct PSPVertex));
 
 	static const int sz_pointer = 3;
 
