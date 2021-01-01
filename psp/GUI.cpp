@@ -3,8 +3,6 @@
 
 #include <malloc.h>
 
-#include "intraFont.h"
-
 #include "GUI.h"
 
 #define TEXTURE_FLAGS (GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D)
@@ -26,7 +24,6 @@ struct DispVertex
 };
 
 void* glist = memalign(16, 2048);
-intraFont* Font;
 
 Icon menu [2][3];
 

@@ -47,6 +47,8 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_VFPU | THREAD_ATTR_USER);
 #include "../settings.h"
 #include "../gpu.h"
 
+#include "GUI.h"
+
 #include "GPU/draw.h"
 
 #include "melib.h"
@@ -72,7 +74,11 @@ const u16 pspKEY[12] =
   };
 
 char rom_filename[256];
+
 Draw * psp_render;
+f_list filelist;
+
+int selpos=0;
 
 void WriteLog(char* msg)
 {
@@ -82,183 +88,27 @@ void WriteLog(char* msg)
 	fclose(fd);
 }
 
-typedef struct fname{
-	char name[256];
-}f_name;
-
-typedef struct flist{
-	f_name fname[256];
-	int cnt;
-}f_list;
-
-f_list filelist;
-
-void ClearFileList(){
-	filelist.cnt =0;
-}
-
-
-int HasExtension(char *filename){
-	if(filename[strlen(filename)-4] == '.'){
-		return 1;
-	}
-	return 0;
-}
-
-
-void GetExtension(const char *srcfile,char *outext){
-	if(HasExtension((char *)srcfile)){
-		strcpy(outext,srcfile + strlen(srcfile) - 3);
-	}else{
-		strcpy(outext,"");
-	}
-}
-
-enum {
-	EXT_NDS = 1,
-	EXT_GZ = 2,
-	EXT_ZIP = 4,
-	EXT_UNKNOWN = 8,
-};
-
-const struct {
-	char *szExt;
-	int nExtId;
-} stExtentions[] = {
-	{"nds",EXT_NDS},
-//	{"gz",EXT_GZ},
-//	{"zip",EXT_ZIP},
-	{NULL, EXT_UNKNOWN}
-};
-
-int getExtId(const char *szFilePath) {
-	char *pszExt;
-
-	if ((pszExt = strrchr(szFilePath, '.'))) {
-		pszExt++;
-		int i;
-		for (i = 0; stExtentions[i].nExtId != EXT_UNKNOWN; i++) {
-			if (!strcasecmp(stExtentions[i].szExt,pszExt)) {
-				return stExtentions[i].nExtId;
-			}
-		}
-	}
-
-	return EXT_UNKNOWN;
-}
-
-
-void GetFileList(const char *root) {
-DIR *dir; struct dirent *ent;
-if ((dir = opendir (root)) != NULL) {
-  while ((ent = readdir (dir)) != NULL) {
-    if(getExtId(ent->d_name)!= EXT_UNKNOWN){
-				strcpy(filelist.fname[filelist.cnt].name,ent->d_name);
-				filelist.cnt++;
-				}
-  }
-  closedir (dir);
-} else {
-  /* could not open directory */
-
-  return;
-}
-}
-
-char * selectionToChar(int selection)
-{
-    switch (selection)
-    {
-        case 1:  return  "  0.5KB"; //  0.5KB
-        case 2:  return  "    8KB"; //    8KB
-        case 3:  return  "   32KB"; //   32KB
-        case 4:  return  "   64KB"; //   64KB
-        case 5:  return  "  128KB"; //  128KB
-        case 6:  return  "  256KB"; //  256KB
-        case 7:  return  "  512KB"; //  512KB
-        case 8:  return  " 1024KB"; // 1024KB
-        case 9:  return  " 8192KB"; // 8192KB
-        default: return  "    0KB"; // None
-    }
-}
-
-char ROM_PATH[256];
-
-int selpos=0, oldpos = -1, oldpage = 0;
-void DisplayFileList()
-{
-	static const int MAX_ROM = filelist.cnt;
-	static const int ROM_SHOWN = 24;
-
-	const int CURR_PAGE = (selpos / ROM_SHOWN);
-
-	const int index = CURR_PAGE * ROM_SHOWN;
-
-	if (selpos == oldpos) return;
-
-	bool max_reached = false;
-
-	oldpos = selpos;
-
-	if (CURR_PAGE > 0)
-		pspDebugScreenPrintf("\nBack\n");
-	else 
-		pspDebugScreenPrintf("\n\n");
-
-
-	for (int c = index;c < index + ROM_SHOWN;c++) {
-
-		if (c >= MAX_ROM) {
-			pspDebugScreenPrintf("\n");
-			max_reached = true;
-			continue;
-		}
-
-		if (selpos == c) {
-			pspDebugScreenSetTextColor(0x0000ffff);
-		}
-		else {
-			pspDebugScreenSetTextColor(0xffffffff);
-		}
-
-		pspDebugScreenPrintf("\n%s", filelist.fname[c].name);
-	}
-
-	pspDebugScreenSetTextColor(0xffffffff);
-
-	if(!max_reached)
-		pspDebugScreenPrintf("\n\nNext Page");
-	else
-		pspDebugScreenPrintf("\n\n\n");
-}
-
 void ROM_CHOOSER()
 {
 	SceCtrlData pad,oldPad;
 
-	ClearFileList();
+	ClearFileList(&filelist);
  
-	GetFileList("ROMS");
+	GetFileList(filelist, "ROMS");
 
     pspDebugScreenSetXY(0,0);
 
 	int cnt;
 	long tm;
 	while(1){
-    sceDisplayWaitVblankStart();
-    pspDebugScreenSetXY(0, 1);
-	pspDebugScreenPrintf(" NooDS PSP");
-	pspDebugScreenSetXY(48, 1);
-	pspDebugScreenPrintf(" Save size: %s ", selectionToChar(memory));
-    pspDebugScreenPrintf(" press CROSS for launch your game\n");
-    pspDebugScreenPrintf(" press TRIANGLE to boot nds firmware\n");
-    pspDebugScreenPrintf(" press SQUARE now for exit");
-		DisplayFileList();
+
+		DrawROMList(&filelist,(selpos/6) + 1,selpos%6);
+
 		if(sceCtrlPeekBufferPositive(&pad, 1))
 		{
 			if (pad.Buttons != oldPad.Buttons)
 			{
-				if(pad.Buttons & PSP_CTRL_SQUARE){
+				if(pad.Buttons & PSP_CTRL_HOME){
 			      sceKernelExitGame();
 				}
 
@@ -287,20 +137,22 @@ void ROM_CHOOSER()
 				}
 
 				if(pad.Buttons & PSP_CTRL_LEFT){
-					selpos -= 25;
+					//selpos -= 24;
+					selpos -= 1;
 					if(selpos < 0)selpos=0;
 				}
 				if(pad.Buttons & PSP_CTRL_RIGHT){
-					selpos += 25;
+					//selpos += 24;
+					selpos += 1;
 					if(selpos >= filelist.cnt -1)selpos=filelist.cnt-1;
 				}
 			
 				if(pad.Buttons & PSP_CTRL_UP){
-					selpos--;
+					selpos-= 3;
 					if(selpos < 0)selpos=0;
 				}
 				if(pad.Buttons & PSP_CTRL_DOWN){
-					selpos++;
+					selpos += 3;
 					if(selpos >= filelist.cnt -1)selpos=filelist.cnt-1;
 				}
 
@@ -323,8 +175,8 @@ void Manager(){
 
 	uint16_t TouchX = psp_render->GetRealTouchX(), TouchY = psp_render->GetRealTouchY();
 
-	pspDebugScreenSetXY(0, 1);
-	pspDebugScreenPrintf("FPS:   %d   ME:    %d    ",core->getFps(),core->getMEFps());
+	/*pspDebugScreenSetXY(0, 1);
+	pspDebugScreenPrintf("FPS:   %d   ME:    %d    ",core->getFps(),core->getMEFps());*/
 
 	if (pad.Lx < 10) {
 		--TouchX; --TouchX;
@@ -391,8 +243,6 @@ int selectionToSize(int selection)
 
 void runCore(void *args)
 {
-    psp_render = new Draw();
-
 	core->cartridge.resizeNdsSave(selectionToSize(memory));
         
     // Run the emulator
@@ -417,6 +267,9 @@ int main() {
       Setting("showFpsCounter", &showFpsCounter, false)
   };
 
+  psp_render = new Draw();
+
+  GUI_Init();
  
   ROM_CHOOSER();
 

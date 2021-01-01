@@ -23,6 +23,7 @@ $(SRCDIR)/timers.o \
 $(SRCDIR)/spu.o \
 $(SRCDIR)/wifi.o \
 	  GPU/draw.o \
+	  	  GUI.o  \
 		  main.o
 
 
@@ -32,7 +33,7 @@ CXX=psp-g++
 PSPSDK = $(shell psp-config --pspsdk-path)
 PSPDEV = $(shell psp-config -d)
 
-CFLAGS = -O3 -finline-functions -fno-rtti -ffast-math -fweb -fomit-frame-pointer  -G0 -Wall -D PSP -funsigned-char -Wall  -falign-loops -falign-labels -falign-jumps -faligned-new
+CFLAGS = -O3 -finline-functions -fno-rtti -ffast-math -fweb -fomit-frame-pointer -Wall -D PSP -funsigned-char -Wall  -falign-loops -falign-labels -falign-jumps -faligned-new #-D DEBUG -G0 -D DEBUG
 
 CXXFLAGS = $(CFLAGS) -fno-exceptions
 
